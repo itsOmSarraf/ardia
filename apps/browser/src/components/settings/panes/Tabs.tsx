@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useTheme } from "../../ui/theme";
 import { useSettings, useTabLayout } from "../../../state/browser/hooks";
@@ -9,7 +9,9 @@ import { durationMinutes, durationParts, type DurationUnit } from "../../../lib/
 import { cleanUpChoices, CUSTOM_CLEAN_UP, DAILY_CLEAN_UP_MINUTES } from "../../../state/settings/cleanUpAfter";
 import { closeSettingsSheet, showSettingsSheet } from "../../../state/settings/sheet";
 import { Anchor, Group, Row, SectionHeader, SettingToggle } from "../Form";
-import type { SettingId } from "../settingsIndex";
+import { ensureTopicModel, topicModelReady } from "../../../state/pins/topicModel";
+import { noteTidyTopicModelDownload } from "../../../state/telemetry/tidyTabsCounts";
+import { setting, type SettingId } from "../settingsIndex";
 import { MiniWindow } from "../MiniWindow";
 import { PictureChoice } from "../PictureChoice";
 import { useSettingsColors } from "../useSettingsColors";
@@ -263,9 +265,56 @@ function CleanUpSection() {
         </Row>
         <SettingToggle anchor="tabs.suggestCleanUp" />
         <SettingToggle anchor="tabs.tidyTabs" />
+        <TopicTidyRow />
       </Group>
     </>
   );
+}
+
+type ModelStatus = { text: string } | null;
+
+function TopicTidyRow() {
+  const on = useSettings((s) => s.tidyTabs && s.tidyTopicTabs);
+  const status = useModelStatus(on);
+  const note = on && status ? ` ${status.text}` : null;
+  return (
+    <Row anchor="tabs.tidyTopicTabs" description={note}>
+      <Toggle
+        value={useSettings((s) => s.tidyTopicTabs)}
+        accessibilityLabel={setting("tabs.tidyTopicTabs").title}
+        onChange={(next) => {
+          updateSettings({ tidyTopicTabs: next });
+          if (next) {
+            noteTidyTopicModelDownload();
+            void ensureTopicModel((fraction) => void fraction);
+          }
+        }}
+      />
+    </Row>
+  );
+}
+
+function useModelStatus(on: boolean): ModelStatus {
+  const [status, setStatus] = useState<ModelStatus>(null);
+  useEffect(() => {
+    if (!on) return;
+    let stopped = false;
+    const show = (text: string) => {
+      if (!stopped) setStatus({ text });
+    };
+    ensureTopicModel((fraction) => show(`Downloading… ${Math.round(Math.min(fraction, 0.99) * 100)}%`))
+      .then(() => show("Ready"))
+      .catch(() => {
+        if (!stopped) setStatus(null);
+      });
+    void topicModelReady().then((ready) => {
+      if (ready) show("Ready");
+    });
+    return () => {
+      stopped = true;
+    };
+  }, [on]);
+  return status;
 }
 
 function CustomCleanUpSheet({ minutes }: { minutes: number }) {

@@ -50,6 +50,7 @@ registerHooks({
     }
   },
   load(url, context, next) {
+    if (url.startsWith("file:") && url.endsWith(".json") && url.includes("/apps/browser/src/")) return { format: "module", source: `export default ${readFileSync(new URL(url), "utf8")}`, shortCircuit: true };
     if (url.startsWith("file:") && url.endsWith(".tsx")) return { format: "module", source: transpiledTsx(url), shortCircuit: true };
     return next(url, context);
   },
