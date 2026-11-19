@@ -234,6 +234,7 @@ export type WebViewProps = ViewProps & {
   onPreferredSize?: (size: { width: number; height: number }) => void;
   onTransferRefused?: (fromWindowId: string) => void;
   onAppBadge?: (badge: AppBadge) => void;
+  onAirTrafficLink?: (link: { url: string }) => void;
 };
 
 export type WebViewHandle = {

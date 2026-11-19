@@ -278,6 +278,7 @@ const cliControl = (on: boolean | null) => testGlobals.acTestCliControl?.(on) ??
 
 export const cancelledDownloads: string[] = [];
 export const endedWebKitSessions: string[] = [];
+export const inAppLinkPatternsByProfile = new Map<string, boolean>();
 export const removedStagings: string[] = [];
 export const stagingRemovals = { ok: true };
 export const deletedProfileData: string[] = [];
@@ -552,6 +553,7 @@ const fakeModules = {
     setPeekModifier: () => null,
     setSplitLinkModifier: () => null,
     setPeekOtherSiteTabs: () => null,
+    setInAppLinkPatterns: ({ profile }) => (inAppLinkPatternsByProfile.set(profile, true), null),
     setSelectionPopover: () => null,
     setBlockAutoplayEverywhere: () => null,
     setCommandScrollZoom: () => null,
